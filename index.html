@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cryptix Password Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #030305;
+      color: #F8FAFC;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .password-mono {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* ============ BACKGROUND CANVAS ============ */
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ============ MAIN LAYOUT ============ */
+    .main-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 48px 16px;
+    }
+
+    .content-wrapper {
+      width: 100%;
+      max-width: 650px;
+    }
+
+    /* ============ HEADER ============ */
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      animation: fadeInDown 0.6s ease;
+    }
+
+    .header-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .header-icon {
+      width: 32px;
+      height: 32px;
+      color: #6366F1;
+    }
+
+    .header h1 {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #F8FAFC 0%, #06B6D4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      color: #94A3B8;
+      font-size: 14px;
+    }
+
+    /* ============ GLASS CARD ============ */
+    .glass-card {
+      background: rgba(10, 10, 15, 0.6);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 40px rgba(99, 102, 241, 0.1);
+      border-radius: 12px;
+    }
+
+    /* ============ CONTROLS CARD ============ */
+    .controls-card {
+      padding: 24px;
+      margin-bottom: 16px;
+      animation: fadeInUp 0.6s ease 0.1s both;
+    }
+
+    .control-group {
+      margin-bottom: 20px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .control-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #F8FAFC;
+    }
+
+    .control-value {
+      width: 56px;
+      height: 28px;
+      text-align: right;
+      font-size: 14px;
+      font-weight: 500;
+      color: #6366F1;
+      font-family: 'JetBrains Mono', monospace;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .control-value:hover {
+      color: #818CF8;
+    }
+
+    .control-value-input {
+      width: 56px;
+      height: 28px;
+      text-align: right;
+      font-size: 14px;
+      font-weight: 500;
+      color: #F8FAFC;
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.5);
+      border-radius: 6px;
+      padding: 0 6px;
+      outline: none;
+    }
+
+    /* ============ SLIDER ============ */
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #6366F1;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+      transition: transform 0.15s ease;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #6366F1;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    }
+
+    /* ============ POOL TOGGLES ============ */
+    .pool-section .control-label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .pool-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .toggle-pill {
+      padding: 8px 18px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(10, 10, 15, 0.8);
+      color: #94A3B8;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .toggle-pill:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #CBD5E1;
+    }
+
+    .toggle-pill.active {
+      background: #6366F1;
+      color: white;
+      border-color: #6366F1;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .toggle-pill.active:hover {
+      background: #4F46E5;
+      border-color: #4F46E5;
+    }
+
+    /* ============ GENERATE BUTTON ============ */
+    .generate-btn {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: #6366F1;
+      color: white;
+      font-weight: 500;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      margin-top: 4px;
+    }
+
+    .generate-btn:hover {
+      background: #4F46E5;
+      box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+    }
+
+    .generate-btn:active {
+      transform: scale(0.97);
+    }
+
+    .generate-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ============ COPY ALL BUTTON ============ */
+    .copy-all-wrapper {
+      margin-bottom: 12px;
+      overflow: hidden;
+      animation: fadeInUp 0.2s ease;
+    }
+
+    .copy-all-btn {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: transparent;
+      color: #94A3B8;
+      font-weight: 500;
+      font-size: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .copy-all-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+    }
+
+    .copy-all-btn.copied {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #10B981;
+    }
+
+    .copy-all-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ============ PASSWORD CARDS ============ */
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .password-card {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: fadeInUp 0.3s ease both;
+      transition: border-color 0.2s ease;
+    }
+
+    .password-card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .password-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .password-text {
+      font-size: 13px;
+      color: #F8FAFC;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-all;
+    }
+
+    .password-strength {
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 4px;
+      animation: strengthGlow 2s ease-in-out infinite;
+    }
+
+    .copy-btn {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94A3B8;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .copy-btn.copied {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #10B981;
+    }
+
+    .copy-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ============ FOOTER ============ */
+    .footer {
+      text-align: center;
+      padding-top: 24px;
+      color: #475569;
+      font-size: 12px;
+      animation: fadeIn 0.6s ease 0.8s both;
+    }
+
+    /* ============ PARTICLES ============ */
+    .particle {
+      animation: particleFadeOut 0.6s ease-out forwards;
+      pointer-events: none;
+      position: fixed;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      z-index: 9999;
+    }
+
+    /* ============ ANIMATIONS ============ */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes particleFadeOut {
+      0% { opacity: 1; transform: translate(0, 0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+    }
+
+    @keyframes strengthGlow {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 480px) {
+      .main-container {
+        padding: 24px 12px;
+      }
+
+      .header h1 {
+        font-size: 32px;
+      }
+
+      .controls-card {
+        padding: 18px;
+      }
+
+      .toggle-pill {
+        padding: 7px 14px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Three.js Background -->
+  <div id="bg-canvas"></div>
+
+  <!-- Main Content -->
+  <div class="main-container">
+    <div class="content-wrapper">
+
+      <!-- Header -->
+      <div class="header">
+        <div class="header-brand">
+          <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <h1>Cryptix</h1>
+        </div>
+        <p>Cryptographically secure password generator</p>
+      </div>
+
+      <!-- Controls -->
+      <div class="glass-card controls-card">
+
+        <!-- Quantity -->
+        <div class="control-group">
+          <div class="control-label-row">
+            <label class="control-label">Quantity</label>
+            <span id="quantity-display" class="control-value">1</span>
+          </div>
+          <input type="range" id="quantity-slider" class="slider" min="1" max="10" value="1" aria-label="Password quantity">
+        </div>
+
+        <!-- Length -->
+        <div class="control-group">
+          <div class="control-label-row">
+            <label class="control-label">Length</label>
+            <span id="length-display" class="control-value">16</span>
+          </div>
+          <input type="range" id="length-slider" class="slider" min="16" max="256" value="16" aria-label="Password length">
+        </div>
+
+        <!-- Character Pools -->
+        <div class="control-group pool-section">
+          <label class="control-label">Character Pools</label>
+          <div class="pool-row">
+            <button class="toggle-pill active" data-pool="lowercase" aria-pressed="true">a-z</button>
+            <button class="toggle-pill active" data-pool="uppercase" aria-pressed="true">A-Z</button>
+            <button class="toggle-pill active" data-pool="numbers" aria-pressed="true">0-9</button>
+            <button class="toggle-pill active" data-pool="symbols" aria-pressed="true">!@#$...</button>
+          </div>
+        </div>
+
+        <!-- Generate -->
+        <button class="generate-btn" id="generate-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          Generate Passwords
+        </button>
+      </div>
+
+      <!-- Copy All (conditionally shown) -->
+      <div id="copy-all-container" style="display: none;"></div>
+
+      <!-- Results -->
+      <div class="results-list" id="results-list"></div>
+
+      <!-- Footer -->
+      <div class="footer">
+        Uses <code>window.crypto.getRandomValues()</code> for cryptographically secure generation. All computation happens locally in your browser.
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ========== CHARACTER POOLS ==========
+    const POOLS = {
+      lowercase: 'abcdefghijklmnopqrstuvwxyz',
+      uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      numbers: '0123456789',
+      symbols: '!@#$%^&*()_+~|}{[]:;?><,./-='
+    };
+
+    // ========== STATE ==========
+    const state = {
+      quantity: 1,
+      length: 16,
+      pools: { lowercase: true, uppercase: true, numbers: true, symbols: true }
+    };
+
+    // ========== DOM REFERENCES ==========
+    const quantitySlider = document.getElementById('quantity-slider');
+    const quantityDisplay = document.getElementById('quantity-display');
+    const lengthSlider = document.getElementById('length-slider');
+    const lengthDisplay = document.getElementById('length-display');
+    const generateBtn = document.getElementById('generate-btn');
+    const resultsList = document.getElementById('results-list');
+    const copyAllContainer = document.getElementById('copy-all-container');
+    const poolButtons = document.querySelectorAll('.toggle-pill[data-pool]');
+
+    // ========== PASSWORD GENERATION ==========
+    function getRandomInt(max) {
+      const array = new Uint32Array(1);
+      window.crypto.getRandomValues(array);
+      return array[0] % max;
+    }
+
+    function getActivePool() {
+      let pool = '';
+      if (state.pools.lowercase) pool += POOLS.lowercase;
+      if (state.pools.uppercase) pool += POOLS.uppercase;
+      if (state.pools.numbers) pool += POOLS.numbers;
+      if (state.pools.symbols) pool += POOLS.symbols;
+      return pool;
+    }
+
+    function getPoolSize() {
+      let size = 0;
+      if (state.pools.lowercase) size += 26;
+      if (state.pools.uppercase) size += 26;
+      if (state.pools.numbers) size += 10;
+      if (state.pools.symbols) size += 29;
+      return size;
+    }
+
+    function validatePassword(password) {
+      if (state.pools.lowercase && !/[a-z]/.test(password)) return false;
+      if (state.pools.uppercase && !/[A-Z]/.test(password)) return false;
+      if (state.pools.numbers && !/[0-9]/.test(password)) return false;
+      if (state.pools.symbols && !/[!@#$%^&*()_+~|}{\[\]:;?><,./-=]/.test(password)) return false;
+      return true;
+    }
+
+    function generatePassword() {
+      const pool = getActivePool();
+      if (pool.length === 0) return '';
+
+      let password;
+      let attempts = 0;
+      const maxAttempts = 100;
+
+      do {
+        password = '';
+        for (let i = 0; i < state.length; i++) {
+          password += pool[getRandomInt(pool.length)];
+        }
+        attempts++;
+      } while (!validatePassword(password) && attempts < maxAttempts);
+
+      return password;
+    }
+
+    // ========== STRENGTH CALCULATION ==========
+    function calculateStrength() {
+      const poolSize = getPoolSize();
+      if (poolSize === 0) {
+        return { display: 'No pool selected', color: '#EF4444' };
+      }
+
+      const combinations = Math.pow(poolSize, state.length);
+      const guessesPerSecond = 1e14;
+      const seconds = combinations / guessesPerSecond;
+
+      let display, color;
+
+      if (seconds < 1) {
+        display = 'Instant';
+        color = '#EF4444';
+      } else if (seconds < 60) {
+        display = Math.floor(seconds) + ' Seconds';
+        color = '#EF4444';
+      } else if (seconds < 3600) {
+        display = Math.floor(seconds / 60) + ' Minutes';
+        color = '#EF4444';
+      } else if (seconds < 86400) {
+        display = Math.floor(seconds / 3600) + ' Hours';
+        color = '#F97316';
+      } else if (seconds < 2592000) {
+        display = Math.floor(seconds / 86400) + ' Days';
+        color = '#EAB308';
+      } else if (seconds < 31536000) {
+        display = Math.floor(seconds / 2592000) + ' Months';
+        color = '#EAB308';
+      } else if (seconds < 3153600000) {
+        display = Math.floor(seconds / 31536000) + ' Years';
+        color = '#10B981';
+      } else if (seconds < 315360000000) {
+        display = Math.floor(seconds / 31536000) + ' Centuries';
+        color = '#10B981';
+      } else {
+        display = 'Astronomical';
+        color = '#06B6D4';
+      }
+
+      return { display, color };
+    }
+
+    // ========== PARTICLE BURST ==========
+    function triggerParticleBurst(x, y) {
+      for (let i = 0; i < 12; i++) {
+        const color = Math.random() > 0.5 ? '#6366F1' : '#06B6D4';
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = 30 + Math.random() * 50;
+
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        p.style.backgroundColor = color;
+        p.style.setProperty('--tx', Math.cos(angle) * velocity + 'px');
+        p.style.setProperty('--ty', Math.sin(angle) * velocity + 'px');
+
+        p.addEventListener('animationend', () => {
+          if (p.parentNode) p.parentNode.removeChild(p);
+        });
+
+        document.body.appendChild(p);
+      }
+    }
+
+    // ========== RENDER RESULTS ==========
+    function renderResults() {
+      resultsList.innerHTML = '';
+
+      for (let i = 0; i < state.quantity; i++) {
+        const password = generatePassword();
+        const strength = calculateStrength();
+
+        const card = document.createElement('div');
+        card.className = 'glass-card password-card';
+        card.style.animationDelay = (i * 0.05) + 's';
+
+        card.innerHTML = `
+          <div class="password-info">
+            <div class="password-text password-mono">${escapeHtml(password)}</div>
+            <div class="password-strength" style="color: ${strength.color}">${strength.display}</div>
+          </div>
+          <button class="copy-btn" data-password="${escapeHtml(password)}" aria-label="Copy password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        `;
+
+        resultsList.appendChild(card);
+      }
+
+      // Show/hide copy all
+      if (state.quantity > 1) {
+        copyAllContainer.style.display = 'block';
+        copyAllContainer.innerHTML = `
+          <div class="copy-all-wrapper">
+            <button class="copy-all-btn" id="copy-all-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy All Passwords
+            </button>
+          </div>
+        `;
+
+        document.getElementById('copy-all-btn').addEventListener('click', function(e) {
+          const passwords = Array.from(document.querySelectorAll('.password-text')).map(el => el.textContent).join('\n');
+          navigator.clipboard.writeText(passwords).then(() => {
+            this.classList.add('copied');
+            this.innerHTML = `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Copied!
+            `;
+            setTimeout(() => {
+              this.classList.remove('copied');
+              this.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copy All Passwords
+              `;
+            }, 1500);
+          });
+        });
+      } else {
+        copyAllContainer.style.display = 'none';
+        copyAllContainer.innerHTML = '';
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ========== EVENT HANDLERS ==========
+
+    // Slider changes
+    quantitySlider.addEventListener('input', () => {
+      state.quantity = parseInt(quantitySlider.value);
+      quantityDisplay.textContent = state.quantity;
+    });
+
+    lengthSlider.addEventListener('input', () => {
+      state.length = parseInt(lengthSlider.value);
+      lengthDisplay.textContent = state.length;
+    });
+
+    // Numeric overrides
+    quantityDisplay.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'control-value-input';
+      input.min = '1';
+      input.max = '10';
+      input.value = state.quantity;
+      quantityDisplay.replaceWith(input);
+      input.focus();
+      input.select();
+
+      function commit() {
+        const val = parseInt(input.value);
+        if (!isNaN(val)) {
+          state.quantity = Math.max(1, Math.min(10, val));
+          quantitySlider.value = state.quantity;
+        }
+        input.replaceWith(quantityDisplay);
+        quantityDisplay.textContent = state.quantity;
+      }
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') {
+          input.replaceWith(quantityDisplay);
+          quantityDisplay.textContent = state.quantity;
+        }
+      });
+      input.addEventListener('blur', commit);
+    });
+
+    lengthDisplay.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'control-value-input';
+      input.min = '16';
+      input.max = '256';
+      input.value = state.length;
+      lengthDisplay.replaceWith(input);
+      input.focus();
+      input.select();
+
+      function commit() {
+        const val = parseInt(input.value);
+        if (!isNaN(val)) {
+          state.length = Math.max(16, Math.min(256, val));
+          lengthSlider.value = state.length;
+        }
+        input.replaceWith(lengthDisplay);
+        lengthDisplay.textContent = state.length;
+      }
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') {
+          input.replaceWith(lengthDisplay);
+          lengthDisplay.textContent = state.length;
+        }
+      });
+      input.addEventListener('blur', commit);
+    });
+
+    // Pool toggles
+    poolButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pool = btn.dataset.pool;
+        const activeCount = Object.values(state.pools).filter(Boolean).length;
+
+        // Prevent unchecking last pool
+        if (state.pools[pool] && activeCount <= 1) return;
+
+        state.pools[pool] = !state.pools[pool];
+        btn.classList.toggle('active');
+        btn.setAttribute('aria-pressed', state.pools[pool]);
+      });
+    });
+
+    // Generate button
+    generateBtn.addEventListener('click', () => {
+      renderResults();
+    });
+
+    // Copy individual (event delegation)
+    resultsList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.copy-btn');
+      if (!btn) return;
+
+      const password = btn.dataset.password;
+      navigator.clipboard.writeText(password).then(() => {
+        btn.classList.add('copied');
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
+
+        const rect = btn.getBoundingClientRect();
+        triggerParticleBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          `;
+        }, 1500);
+      });
+    });
+
+    // ========== THREE.JS BACKGROUND ==========
+    (function initBackground() {
+      const container = document.getElementById('bg-canvas');
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.z = 5;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+      renderer.domElement.style.display = 'block';
+      container.appendChild(renderer.domElement);
+
+      // Vertex shader
+      const vertexShader = `
+        uniform float time;
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          vec3 pos = position;
+          float wave = sin(pos.x * 2.0 + time) * cos(pos.y * 2.0 + time) * 0.1;
+          pos.z += wave;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `;
+
+      // Fragment shader
+      const fragmentShader = `
+        uniform float time;
+        uniform vec2 resolution;
+        varying vec2 vUv;
+        void main() {
+          vec2 uv = gl_FragCoord.xy / resolution;
+          vec3 color = mix(vec3(0.02, 0.02, 0.03), vec3(0.0, 0.0, 0.0), uv.y);
+          vec2 center = vec2(0.5, 0.5);
+          float dist = length(uv - center);
+          float glow = exp(-dist * dist * 3.0);
+          vec3 glowColor = vec3(0.1, 0.4, 0.8) * glow;
+          float wave = sin(uv.x * 10.0 + time) * cos(uv.y * 10.0 + time);
+          float line = smoothstep(0.9, 1.0, abs(wave));
+          vec3 lineColor = vec3(0.2, 0.6, 1.0) * line * 0.5;
+          color += glowColor;
+          color += lineColor;
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `;
+
+      const geometry = new THREE.PlaneGeometry(12, 12, 64, 64);
+      const uniforms = {
+        time: { value: 0 },
+        resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+      };
+
+      const material = new THREE.ShaderMaterial({
+        vertexShader,
+        fragmentShader,
+        uniforms,
+        side: THREE.DoubleSide,
+        transparent: true,
+        depthWrite: false
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      // Wireframe overlay
+      const wireGeo = new THREE.WireframeGeometry(geometry);
+      const wireMat = new THREE.LineBasicMaterial({
+        color: 0x06B6D4,
+        transparent: true,
+        opacity: 0.12,
+        depthWrite: false
+      });
+      const wireframe = new THREE.LineSegments(wireGeo, wireMat);
+
+      const sceneOverlay = new THREE.Scene();
+      sceneOverlay.add(wireframe);
+
+      // Physics state
+      const posAttr = geometry.attributes.position;
+      const originalPositions = new Float32Array(posAttr.count * 3);
+      for (let i = 0; i < posAttr.count; i++) {
+        originalPositions[i * 3] = posAttr.getX(i);
+        originalPositions[i * 3 + 1] = posAttr.getY(i);
+        originalPositions[i * 3 + 2] = posAttr.getZ(i);
+      }
+
+      const velocities = new Float32Array(posAttr.count * 3);
+      const masses = new Float32Array(posAttr.count);
+      for (let i = 0; i < posAttr.count; i++) {
+        const x = originalPositions[i * 3];
+        const y = originalPositions[i * 3 + 1];
+        const distFromCenter = Math.sqrt(x * x + y * y) / 8.5;
+        masses[i] = 1.0 + distFromCenter * 3.0;
+      }
+
+      // Mouse interaction
+      let mouseX = 0, mouseY = 0;
+      let targetMouseX = 0, targetMouseY = 0;
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      const interactionPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+      const interactionPoint = new THREE.Vector3();
+
+      window.addEventListener('mousemove', (e) => {
+        targetMouseX = (e.clientX / window.innerWidth) * 2 - 1;
+        targetMouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+      });
+
+      const clock = new THREE.Clock();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const elapsed = clock.getElapsedTime();
+
+        mouseX += (targetMouseX - mouseX) * 0.08;
+        mouseY += (targetMouseY - mouseY) * 0.08;
+
+        mouse.set(mouseX, mouseY);
+        raycaster.setFromCamera(mouse, camera);
+
+        if (raycaster.ray.intersectPlane(interactionPlane, interactionPoint)) {
+          const positions = geometry.attributes.position.array;
+
+          for (let i = 0; i < posAttr.count; i++) {
+            const idx = i * 3;
+            const ox = originalPositions[idx];
+            const oy = originalPositions[idx + 1];
+            const oz = originalPositions[idx + 2];
+
+            const dx = positions[idx] - interactionPoint.x;
+            const dy = positions[idx + 1] - interactionPoint.y;
+            const dz = positions[idx + 2] - interactionPoint.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (dist < 1.8 && dist > 0.001) {
+              const force = (1 - dist / 1.8) * 0.8;
+              const nx = dx / dist;
+              const ny = dy / dist;
+              const nz = dz / dist;
+              velocities[idx] += nx * force * 0.3 / masses[i];
+              velocities[idx + 1] += ny * force * 0.3 / masses[i];
+              velocities[idx + 2] += nz * force * 0.3 / masses[i];
+            }
+
+            const springK = 0.05;
+            velocities[idx] += (ox - positions[idx]) * springK / masses[i];
+            velocities[idx + 1] += (oy - positions[idx + 1]) * springK / masses[i];
+            velocities[idx + 2] += (oz - positions[idx + 2]) * springK / masses[i];
+
+            velocities[idx] *= 0.92;
+            velocities[idx + 1] *= 0.92;
+            velocities[idx + 2] *= 0.92;
+
+            positions[idx] += velocities[idx];
+            positions[idx + 1] += velocities[idx + 1];
+            positions[idx + 2] += velocities[idx + 2];
+          }
+
+          geometry.attributes.position.needsUpdate = true;
+
+          const wirePositions = wireGeo.attributes.position.array;
+          for (let i = 0; i < positions.length; i++) {
+            wirePositions[i] = positions[i];
+          }
+          wireGeo.attributes.position.needsUpdate = true;
+        }
+
+        uniforms.time.value = elapsed;
+
+        renderer.autoClear = true;
+        renderer.render(scene, camera);
+        renderer.autoClear = false;
+        renderer.render(sceneOverlay, camera);
+      }
+
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+      });
+    })();
+
+    // ========== INITIAL GENERATE ==========
+    renderResults();
+  </script>
+</body>
+</html>
